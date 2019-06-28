@@ -11,14 +11,14 @@ const baseaddr = '0x17ebd41cb0bb437cd24e94e2d4cf98ebedce7ad2';//"0xput your wall
 const basepsd = 'hello'//;"your password";
 const sendOption = { from: baseaddr, gas: '2000000' };
 
-const solcVersion = '0.4.25';
+var solcVersion = '0.5.3';
 
 var vnodeUri;// = 'http://localhost:8545';
 let chain3 = new Chain3();
 
-function init(url = 'http://localhost:8545') {
+function init(url = 'http://localhost:8545', _solcVersion = '0.5.3') {
     vnodeUri = url;
-
+    solcVersion = _solcVersion;
     chain3.setProvider(new Chain3.providers.HttpProvider(vnodeUri));
 
     if (!chain3.isConnected()) {
@@ -41,9 +41,9 @@ function deploy(contractName, ...params) {
 
     const compiled = solcLib.compile(contractName, solcVersion);
 
-    var vnodeprotocolbaseContract = chain3.mc.contract(JSON.parse(compiled.abi));
+    var contract = chain3.mc.contract(JSON.parse(compiled.abi));
 
-    var vnodeprotocolbase = vnodeprotocolbaseContract.new(
+    var deployResult = contract.new(
         ...params,
         {
             from: baseaddr,
@@ -51,8 +51,8 @@ function deploy(contractName, ...params) {
             gas: '9000000'
         }
     );
-    var contractAddr = waitBlock(vnodeprotocolbase.transactionHash).contractAddress;
-    console.log(contractName, 'deploy tx:', vnodeprotocolbase.transactionHash, 'deployed at:', contractAddr);
+    var contractAddr = waitBlock(deployResult.transactionHash).contractAddress;
+    console.log(contractName, 'deploy tx:', deployResult.transactionHash, 'deployed at:', contractAddr);
     return contractAddr;
 }
 

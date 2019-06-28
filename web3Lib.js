@@ -5,10 +5,11 @@ const util = require('./util');
 const baseaddr = '0x17ebd41cb0bb437cd24e94e2d4cf98ebedce7ad2';//"0xput your wallet accouint";
 const basepsd = 'hello'//;"your password";
 
-const solcVersion = '0.5.3';
+var solcVersion = '0.5.3';
 
 const web3 = new Web3();
-function init(url = 'http://localhost:8540') {
+function init(url = 'http://localhost:8540', _solcVersion = '0.5.3') {
+    solcVersion = _solcVersion;
     web3.setProvider(new Web3.providers.HttpProvider(url));
     if (!web3.isConnected()) {
         throw new Error('unable to connect to moac vnode at ' + url);
@@ -25,7 +26,6 @@ function init(url = 'http://localhost:8540') {
         throw new Error('unlock failed ' + baseaddr);
     }
 }
-
 
 function deploy(contractName, ...params) {
 

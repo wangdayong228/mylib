@@ -32,6 +32,8 @@ function compile0425(contractFilePath) {
     }
 
     var output = solc.compile({ sources: input }, 1);
+    console.log('compile output:', output);
+
     const abi = output.contracts[':' + solName].interface;
     const bin = output.contracts[':' + solName].bytecode;
     console.log('compile', solName, 'done');
@@ -69,6 +71,7 @@ function compile053(contractFilePath) {
 
     var compileRst = solc.compile(JSON.stringify(input), p => findImports(path.join(dirName, p)));
     var output = JSON.parse(compileRst);
+    console.log('compile output:', output);
     // return output;
 
     if (output.errors)
