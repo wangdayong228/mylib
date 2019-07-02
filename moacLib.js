@@ -4,56 +4,23 @@ const Chain3 = require('chain3');
 const solcLib = require('./solcLib');
 const moacapi = require('moac-api');
 const http = require('http');
+const CommonBlkLib = require('./commonBlkLib').CommonBlkLib;
 const util = require('./util');
 
 // need to have a valid account to use for contracts deployment
-const baseaddr = '0x17ebd41cb0bb437cd24e94e2d4cf98ebedce7ad2';//"0xput your wallet accouint";
-const basepsd = 'hello'//;"your password";
-const sendOption = { from: baseaddr, gas: '2000000' };
+// var baseAddr = '0x17ebd41cb0bb437cd24e94e2d4cf98ebedce7ad2';//"put your wallet account";
+// var basePsd = 'hello'//;"your password";
+// var solcVersion = '0.5.3';
+// var vnodeUri = 'http://localhost:8545';
 
-var solcVersion = '0.5.3';
-
-var vnodeUri;// = 'http://localhost:8545';
+// var sendOption;
 let chain3 = new Chain3();
 
-function init(url = 'http://localhost:8545', _solcVersion = '0.5.3') {
-    vnodeUri = url;
-    solcVersion = _solcVersion;
-    chain3.setProvider(new Chain3.providers.HttpProvider(vnodeUri));
+var commonBlkLib = new CommonBlkLib();
 
-    if (!chain3.isConnected()) {
-        throw new Error('unable to connect to moac vnode at ' + vnodeUri);
-    } else {
-        console.log('connected to moac vnode at ' + vnodeUri);
-        let balance = chain3.mc.getBalance(baseaddr);
-        console.log('Check src account balance:' + baseaddr + ' has ' + balance / 1e18 + ' MC');
-    }
-
-    if (chain3.personal.unlockAccount(baseaddr, basepsd, 0)) {
-        console.log(`${baseaddr} is unlocked`);
-    } else {
-        console.log(`unlock failed, ${baseaddr}`);
-        throw new Error('unlock failed ' + baseaddr);
-    }
-}
-
-function deploy(contractName, ...params) {
-
-    const compiled = solcLib.compile(contractName, solcVersion);
-
-    var contract = chain3.mc.contract(JSON.parse(compiled.abi));
-
-    var deployResult = contract.new(
-        ...params,
-        {
-            from: baseaddr,
-            data: '0x' + compiled.bin,
-            gas: '9000000'
-        }
-    );
-    var contractAddr = waitBlock(deployResult.transactionHash).contractAddress;
-    console.log(contractName, 'deploy tx:', deployResult.transactionHash, 'deployed at:', contractAddr);
-    return contractAddr;
+function init(_nodeUrl = 'http://localhost:8545', _solcVersion = '0.5.3', _baseAddr = '0x17ebd41cb0bb437cd24e94e2d4cf98ebedce7ad2', _basePsd = 'hello') {
+    commonBlkLib.init(chain3, chain3.mc, _nodeUrl, _solcVersion, _baseAddr, _basePsd);
+    // sendOption = { from: _baseAddr, gas: '2000000' };
 }
 
 // function deployDappbase(subChainBaseAddr, proxyNodeAddr, sendAmount, nonce) {
@@ -64,7 +31,7 @@ function deploy(contractName, ...params) {
 // }
 
 function deploySubchainContract(contractName, subChainBaseAddr, sendAmount, nonce, proxyNodeAddr) {
-    const compiled = solcLib.compile(contractName, solcVersion);
+    const compiled = solcLib.compile(contractName, commonBlkLib.solcVersion);
     const tx = sendSubChainTx(subChainBaseAddr, sendAmount, '0x' + compiled.bin, nonce, '0x3', proxyNodeAddr);
     console.log('deploy', contractName, 'done:', tx);
 }
@@ -73,57 +40,19 @@ function deploySubchainContract(contractName, subChainBaseAddr, sendAmount, nonc
 //     return sendSubChainTx(subChainBaseAddr, sendAmount, methodInDappAddr + data.substr(2), nonce, '0x1', proxyNodeAddr);
 // }
 
-function getContract(contractName, contractAddress) {
-    const compiled = solcLib.compile(contractName, solcVersion);
-
-    var contract = chain3.mc.contract(JSON.parse(compiled.abi));
-    const instance = contract.at(contractAddress);
-    return instance;
-}
-
-// function compile(contractFileName) {
-//     var basepath = '.';
-//     var solpath = basepath + '/' + contractFileName + '.sol';
-//     const contract = fs.readFileSync(solpath, 'utf8');
-
-//     // Need to read all contract files to compile
-//     var input = {
-//         '': contract,
-//     };
-
-//     var re = /import "(.*)"/g;
-//     var match;
-
-//     while (match = re.exec(contract)) {
-//         // console.log(match[1]);
-//         var importFileName = match[1].match(/\/(.*\.sol)/)[1];
-//         // console.log('importFileName:', importFileName);
-//         input[importFileName] = fs.readFileSync(match[1], 'utf8');
-//     }
-
-//     var output = solc.compile({ sources: input }, 1);
-//     const abi = output.contracts[':' + contractFileName].interface;
-//     const bin = output.contracts[':' + contractFileName].bytecode;
-//     console.log('compile', contractFileName, 'done');
-//     return {
-//         abi: abi,
-//         bin: bin
-//     }
-// }
-
 //shardingFlag means
 //monther chain: 0, subchain deploy: 0x03, subchain call: 0x01
 function sendTx(to, amount, strData = '0x') {
     const tx = chain3.mc.sendTransaction(
         {
-            from: baseaddr,//src,
+            from: commonBlkLib.baseAddr,//src,
             value: chain3.toSha(amount, 'mc'),
             to: to,
             gas: '2000000',
             gasPrice: chain3.mc.gasPrice,
             data: strData,
         });
-    console.log('sending subchain tx from:' + baseaddr + ' to:' + to + ' amount:' + amount + ' with data:' + strData + ' tx:' + tx);
+    console.log('sending subchain tx from:' + commonBlkLib.baseAddr + ' to:' + to + ' amount:' + amount + ' with data:' + strData + ' tx:' + tx);
     return tx;
 }
 
@@ -131,7 +60,7 @@ function sendTx(to, amount, strData = '0x') {
 function sendSubChainTx(to, amount, strData, nonce, shardingFlag = '0x3', via = null) {
     const tx = chain3.mc.sendTransaction(
         {
-            from: baseaddr,//src,
+            from: commonBlkLib.baseAddr,//src,
             value: chain3.toSha(amount, 'mc'),
             to: to,
             gas: 0,
@@ -142,7 +71,7 @@ function sendSubChainTx(to, amount, strData, nonce, shardingFlag = '0x3', via = 
             nonce: nonce,
             chainId: chain3.toHex(101)
         });
-    console.log('sending from:' + baseaddr + ' to:' + to + ' nonce:' + nonce + ' shardingFlag:' + shardingFlag + ' via:' + via + ' amount:' + amount + ' with data:' + strData + ' tx:' + tx);
+    console.log('sending from:' + commonBlkLib.baseAddr + ' to:' + to + ' nonce:' + nonce + ' shardingFlag:' + shardingFlag + ' via:' + via + ' amount:' + amount + ' with data:' + strData + ' tx:' + tx);
     return tx;
 }
 
@@ -153,7 +82,7 @@ function getSubChainNonce(subChainAddr, callback) {
         'method': 'ScsRPCMethod.GetNonce',
         'params': {
             'SubChainAddr': subChainAddr,
-            'Sender': baseaddr
+            'Sender': commonBlkLib.baseAddr
         }
     };
     subChainRpc(body, callback);
@@ -204,82 +133,35 @@ function subChainRpc(body, callback) {
     req.end();
 }
 
-// Check if the input address has enough balance for the mc amount
-function checkBalance(inaddr, inMcAmt) {
-    if (chain3.mc.getBalance(inaddr) / 1e18 >= inMcAmt) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-function waitBalance(addr, target) {
-    while (true) {
-        let balance = chain3.mc.getBalance(addr) / 1000000000000000000;
-        if (balance >= target) {
-            console.log('account has enough balance ' + balance);
-            break;
-        }
-        console.log('Waiting the account has enough balance ' + balance);
-        util.sleep(5000);
-    }
-}
-
-function waitBlock(transactionHash) {
-    console.log('Waiting a mined block to include your transaction...');
-
-    while (true) {
-        let receipt = chain3.mc.getTransactionReceipt(transactionHash);
-        if (receipt) {
-            // if (receipt.contractAddress) {
-            console.log(transactionHash, 'receipt status:', receipt.status);
-            return receipt;
-            // }
-        }
-        console.log('block ' + chain3.mc.blockNumber + '...');
-        util.sleep(50000);
-    }
-}
-
-// function sleep(milliseconds) {
-//     var start = new Date().getTime();
-//     for (var i = 0; i < 1e7; i++) {
-//         if ((new Date().getTime() - start) > milliseconds) {
-//             break;
-//         }
-//     }
-// }
-
-function isAddress0(address) {
-    return address == '0x0000000000000000000000000000000000000000';
-}
-
 function overwriteSubchainTx(nonce, via) {
     sendSubChainTx('0x0000000000000000000000000000000000000000', 0, '0x', nonce, '0x3', via)
 }
 
 module.exports = {
     moacapi,
-    baseaddr,
     chain3,
-    // compile: solcLib.compile,
+    blk: chain3,
+    mc: chain3.mc,
+    core: chain3.mc,
     init,
-    deploy,
     // deployDappbase,
     deploySubchainContract,
-    getContract,
     sendTx,
     sendSubChainTx,
-    sendOption,
+    // sendOption,
     // sendSubChainContractMethod,
-    waitBlock,
-    // sleep,
-    waitBalance,
-    checkBalance,
-    isAddress0,
     overwriteSubchainTx,
 
     getSubChainNonce,
     getSubChainReceiptByHash,
     subChainRpc
 }
+
+util.getAllPropNames(commonBlkLib)
+    .filter(p => p !== 'init' && p !== 'initParams')
+    .forEach(p => {
+        if (typeof commonBlkLib[p] == 'function')
+            module.exports[p] = commonBlkLib[p].bind(commonBlkLib);
+        // else
+        //     module.exports[p] = commonBlkLib[p];
+    });

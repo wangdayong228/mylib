@@ -1,7 +1,7 @@
 var moacLib = require('./moacLib');
 var solcLib = require('./solcLib');
 var web3Lib = require('./web3Lib');
-
+var util = require('./util');
 
 function getFuncHead(fun) {
     return fun.toString().match(/function(.*){/)[1];
@@ -45,4 +45,4 @@ function addInstMethod(instance, name, fn) {
     }
 }
 
-module.exports = { moacLib, web3Lib, solcLib, getFuncHead, openModuleToRoot, addMethod, addInstMethod };
+module.exports = { moacLib, web3Lib, solcLib, util, getFuncHead, openModuleToRoot, addMethod, addInstMethod };
